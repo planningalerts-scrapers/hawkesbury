@@ -25,7 +25,7 @@ def scrape_table(doc, comment_url)
       'description' => CGI::unescapeHTML(clean_whitespace(h[3].split('<br>')[1..-1].join)),
       'date_scraped' => Date.today.to_s
     }
-    
+
     #pp record
     if (ScraperWiki.select("* from data where `council_reference`='#{record['council_reference']}'").empty? rescue true)
       ScraperWiki.save_sqlite(['council_reference'], record)
@@ -40,7 +40,7 @@ def scrape_and_follow_next_link(doc, comment_url)
   nextButton = doc.at('.rgPageNext')
   unless nextButton.nil? || nextButton['onclick'] =~ /return false/
     form = doc.forms.first
-    
+
     # The joy of dealing with ASP.NET
     form['__EVENTTARGET'] = nextButton['name']
     form['__EVENTARGUMENT'] = ''
