@@ -3,13 +3,12 @@ require 'rubygems'
 require 'mechanize'
 
 starting_url = 'http://council.hawkesbury.nsw.gov.au/MasterviewUI/Modules/applicationmaster/default.aspx?page=found&1=thismonth&4a=DA&6=F'
-comment_url = 'mailto:council@hawkesbury.nsw.gov.au?subject='
 
 def clean_whitespace(a)
   a.gsub("\r", ' ').gsub("\n", ' ').squeeze(" ").strip
 end
 
-def scrape_table(doc, comment_url)
+def scrape_table(doc)
   doc.search('table tbody tr').each do |tr|
     # Columns in table
     # Show  Number  Submitted  Details
@@ -18,7 +17,6 @@ def scrape_table(doc, comment_url)
 
     record = {
       'info_url' => (doc.uri + tds[0].at('a')['href']).to_s,
-      'comment_url' => comment_url + CGI::escape("Development Application Enquiry: " + clean_whitespace(h[1])),
       'council_reference' => clean_whitespace(h[1]),
       'date_received' => Date.strptime(clean_whitespace(h[2]), '%d/%m/%Y').to_s,
       'address' => (clean_whitespace(tds.search(:strong).inner_text) + ", NSW"),
@@ -31,8 +29,8 @@ def scrape_table(doc, comment_url)
   end
 end
 
-def scrape_and_follow_next_link(doc, comment_url)
-  scrape_table(doc, comment_url)
+def scrape_and_follow_next_link(doc)
+  scrape_table(doc)
   nextButton = doc.at('.rgPageNext')
   unless nextButton.nil? || nextButton['onclick'] =~ /return false/
     form = doc.forms.first
@@ -47,7 +45,7 @@ def scrape_and_follow_next_link(doc, comment_url)
     form['ctl00_RadScriptManager1_HiddenField']=
       '%3B%3BSystem.Web.Extensions%2C%20Version%3D3.5.0.0%2C%20Culture%3Dneutral%2C%20PublicKeyToken%3D31bf3856ad364e35%3Aen-US%3A0d787d5c-3903-4814-ad72-296cea810318%3Aea597d4b%3Ab25378d2%3BTelerik.Web.UI%2C%20Version%3D2009.1.527.35%2C%20Culture%3Dneutral%2C%20PublicKeyToken%3D121fae78165ba3d4%3Aen-US%3A1e3fef00-f492-4ed8-96ce-6371bc241e1c%3A16e4e7cd%3Af7645509%3A24ee1bba%3Ae330518b%3A1e771326%3Ac8618e41%3A4cacbc31%3A8e6f0d33%3Aed16cbdc%3A58366029%3Aaa288e2d'
     doc = form.submit(form.button_with(:name => nextButton['name']))
-    scrape_and_follow_next_link(doc, comment_url)
+    scrape_and_follow_next_link(doc)
   end
 end
 
@@ -58,4 +56,4 @@ doc = agent.get(starting_url)
 doc = doc.forms.first.submit(doc.forms.first.button_with(:value => "Agree"))
 doc = agent.get(starting_url)
 
-scrape_and_follow_next_link(doc, comment_url)
+scrape_and_follow_next_link(doc)
